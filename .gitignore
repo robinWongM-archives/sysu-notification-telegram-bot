@@ -59,3 +59,6 @@ typings/
 
 # next.js build output
 .next
+
+# local development files
+.local_config_file

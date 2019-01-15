@@ -16,12 +16,18 @@ const sequelize = new Sequelize(
     }
   }
 )
-// Test the connection
-await sequelize.authenticate()
 
 // Define models & Sync
 const User = sequelize.define('user', {
   id: {
+    type: Sequelize.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  telegramId: {
+    type: Sequelize.INTEGER
+  },
+  chatId: {
     type: Sequelize.INTEGER
   }
 })
@@ -31,6 +37,9 @@ const Site = sequelize.define('site', {
     type: Sequelize.INTEGER,
     primaryKey: true,
     autoIncrement: true
+  },
+  name: {
+    type: Sequelize.STRING
   },
   domain: {
     type: Sequelize.STRING
@@ -43,11 +52,17 @@ const Category = sequelize.define('category', {
     primaryKey: true,
     autoIncrement: true
   },
-  key: {
+  name: {
+    type: Sequelize.STRING
+  },
+  path: {
     type: Sequelize.STRING
   },
   updateInterval: {
     type: Sequelize.INTEGER
+  },
+  parseType: {
+    type: Sequelize.ENUM('sdcs')
   },
   lastUpdate: {
     type: Sequelize.TIME
@@ -68,8 +83,12 @@ const Post = sequelize.define('post', {
   }
 })
 
-User.belongsToMany(Category)
-Category.belongsToMany(User)
+User.belongsToMany(Category, {
+  through: 'userCategory'
+})
+Category.belongsToMany(User, {
+  through: 'userCategory'
+})
 
 Site.hasMany(Category)
 Category.belongsTo(Site)
@@ -77,4 +96,12 @@ Category.belongsTo(Site)
 Category.hasMany(Post)
 Post.belongsTo(Category)
 
-await sequelize.sync()
+// Remember to invoke sequelize.sync()
+module.exports = {
+  sequelize,
+  Sequelize,
+  User,
+  Site,
+  Category,
+  Post
+}
