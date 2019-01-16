@@ -13,7 +13,18 @@ const sequelize = new Sequelize(
       min: 0,
       acquire: 30000,
       idle: 10000
-    }
+    },
+    dialectOptions: {
+      typeCast: function (field, next) { // for reading from database
+        if (field.type === 'DATETIME') {
+          return field.string()
+        }
+        return next()
+      },
+    },
+    timezone: '+08:00', // for writing to database
+
+    logging: false
   }
 )
 
@@ -29,6 +40,15 @@ const User = sequelize.define('user', {
   },
   chatId: {
     type: Sequelize.INTEGER
+  },
+  userName: {
+    type: Sequelize.STRING
+  },
+  firstName: {
+    type: Sequelize.STRING
+  },
+  lastName: {
+    type: Sequelize.STRING
   }
 })
 
@@ -76,18 +96,47 @@ const Post = sequelize.define('post', {
     autoIncrement: true
   },
   url: {
-    type: Sequelize.STRING
+    type: Sequelize.TEXT
   },
   title: {
+    type: Sequelize.TEXT
+  },
+  content: {
+    type: Sequelize.TEXT
+  },
+  excerpt: {
+    type: Sequelize.TEXT
+  },
+  publishDate: {
     type: Sequelize.STRING
+  },
+})
+
+const Attachment = sequelize.define('attachment', {
+  id: {
+    type: Sequelize.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  name: {
+    type: Sequelize.TEXT
+  },
+  url: {
+    type: Sequelize.TEXT
+  },
+  fileType: {
+    type: Sequelize.TEXT
+  },
+  fileId: {
+    type: Sequelize.INTEGER
   }
 })
 
 User.belongsToMany(Category, {
-  through: 'userCategory'
+  through: 'user_category'
 })
 Category.belongsToMany(User, {
-  through: 'userCategory'
+  through: 'user_category'
 })
 
 Site.hasMany(Category)
@@ -96,6 +145,9 @@ Category.belongsTo(Site)
 Category.hasMany(Post)
 Post.belongsTo(Category)
 
+Post.hasMany(Attachment)
+Attachment.belongsTo(Post)
+
 // Remember to invoke sequelize.sync()
 module.exports = {
   sequelize,
@@ -103,5 +155,6 @@ module.exports = {
   User,
   Site,
   Category,
-  Post
+  Post,
+  Attachment
 }
