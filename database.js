@@ -35,11 +35,11 @@ const User = sequelize.define('user', {
     primaryKey: true,
     autoIncrement: true
   },
-  telegramId: {
-    type: Sequelize.INTEGER
-  },
   chatId: {
-    type: Sequelize.INTEGER
+    type: Sequelize.STRING
+  },
+  type: {
+    type: Sequelize.ENUM('private', 'group', 'supergroup', 'channel')
   },
   userName: {
     type: Sequelize.STRING
@@ -48,6 +48,9 @@ const User = sequelize.define('user', {
     type: Sequelize.STRING
   },
   lastName: {
+    type: Sequelize.STRING
+  },
+  title: {
     type: Sequelize.STRING
   }
 })
@@ -82,7 +85,7 @@ const Category = sequelize.define('category', {
     type: Sequelize.INTEGER
   },
   parseType: {
-    type: Sequelize.ENUM('sdcs')
+    type: Sequelize.STRING
   },
   lastUpdate: {
     type: Sequelize.TIME

@@ -4,22 +4,6 @@ const got = require('got')
 const cheerio = require('cheerio')
 const moment = require('moment')
 
-const TurndownService = require('turndown')
-const turndownService = new TurndownService()
-
-turndownService.addRule('pAsBr', {
-  filter: ['p'],
-  replacement: content => `\n${content.trim()}\n`
-})
-turndownService.addRule('tgBold', {
-  filter: ['b', 'strong'],
-  replacement: content => `*${content.trim()}*`
-})
-turndownService.addRule('removeTable', {
-  filter: ['table'],
-  replacement: content => '（表格内容，请访问原文链接查看）'
-})
-
 const Extra = require('telegraf/extra')
 const Markup = require('telegraf/markup')
 
@@ -60,7 +44,7 @@ async function parseList(Database, category, selector, Telegram) {
     })
     if (wasCreated) {
       debug('Detected new post', postItem.title, postItem.publishDate)
-      category.addPost(postItem)
+      await category.addPost(postItem)
       
       // Parse content
       let contentEl = $1('.field-name-body.field-type-text-with-summary .field-items .field-item')
@@ -95,7 +79,7 @@ async function parseList(Database, category, selector, Telegram) {
             fileType: fileSpan.children('img').attr('title')
           }
         })
-        postItem.addAttachment(attachmentItem)
+        await postItem.addAttachment(attachmentItem)
       }
 
       await postItem.save()
@@ -108,6 +92,10 @@ async function parseList(Database, category, selector, Telegram) {
       // let userList = await category.getUsers()
       let userList = await Database.User.findAll()
       for (let user of userList) {
+        if (user.chatId != 406318833) {
+          // Ignore
+          // continue
+        }
         Telegram.sendMessage(
           user.chatId, 
           `#学院通知 ${
@@ -129,12 +117,16 @@ async function parseList(Database, category, selector, Telegram) {
               ])
             })
           )
-        limit--
         await sleep(500)
       }
+      limit--
     }
     //console.log(link.text(), `https://${ category.site.domain }${ link.attr('href') }`)
   }
+}
+
+module.exports = {
+  
 }
 
 module.exports = {

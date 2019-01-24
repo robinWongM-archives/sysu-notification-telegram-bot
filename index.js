@@ -1,10 +1,16 @@
 (async () => {
+  const HttpsProxyAgent = require('https-proxy-agent')
   const Telegraf = require('telegraf')
+  const Extra = require('telegraf/extra')
 
   const Database = require('./database.js')
   const User = require('./user.js')
-  const Fetch = require('./fetch.js')
+  const Fetch = require('./lib/fetch')
+  const BotShortcut = require('./lib/bot-shortcut')
+  const Subscribe = require('./lib/subscribe')
   const DefaultConfig = require('./bot.config.js')
+
+  const debug = require('debug')('SYSUBOT_Bot')
 
   // Initialize Database
   await Database.sequelize.sync()
@@ -13,8 +19,7 @@
       where: {
         name: site.name,
         domain: site.domain
-      },
-      defaults: site
+      }
     })
     for (let category of site.categories) {
       let [categoryItem] = await Database.Category.findOrCreate({
@@ -26,50 +31,64 @@
   }
 
   // Initialize Bot
-  const bot = new Telegraf(process.env.SYSU_BOT_TOKEN)
+  const bot = new Telegraf(process.env.SYSU_BOT_TOKEN, {
+    telegram: {
+      agent: new HttpsProxyAgent({
+        host: '127.0.0.1',
+        port: 23333
+      })
+    }
+  })
   bot.use(async (ctx, next) => {
-    console.log(ctx.message)
+    debug('Received new message', ctx.message)
     await next()
   })
 
   bot.use(User(Database))
 
-  /* bot.start((ctx) => ctx.reply('Welcome!'))
-  bot.help((ctx) => ctx.reply('Send me a sticker'))
-  bot.on('sticker', (ctx) => ctx.reply('👍'))
-  bot.hears('hi', (ctx) => ctx.reply('Hey there')) */
-
-  bot.start(async (ctx, next) => {
-    console.log(ctx.user)
-    ctx.replyWithSticker('CAADBQADmwEAAiQKYgV27YFYOXIDHwI')
-    Fetch.fetchJob(Database, bot.telegram)
-    await next()
-  })
-
-  bot.action(/(all|less)\|(\d+)/, (ctx) => {
-    // Using shortcut
-    console.log(ctx.match)
-    Fetch.callback(ctx, Database)
-  })
-  bot.action(/att\|(\d+)/, (ctx) => {
-    // Using shortcut
-    console.log(ctx.match)
-    Fetch.attachmentCb(ctx, Database)
-  })
-
-  setInterval(() => {
-    Fetch.fetchJob(Database, bot.telegram)
-  }, 60000)
-  
+  // Random Sticker
   /*
-  let userList = await Database.User.findAll()
+
+  */
+
+
+  /* bot.start(async (ctx, next) => {
+    console.log(ctx.user)
+    // TODO: random sticker
+    ctx.replyWithSticker('CAADBQADmwEAAiQKYgV27YFYOXIDHwI')
+    // ctx.reply('大山中学快递员 Bot 即将进行推送测试。\n测试推送内容为近期数据院本科教务通知与学生工作通知，频率约为 2 条 / 分钟，敬请留意。')
+    await next()
+  }) */
+  bot.start(Subscribe.startHandler)
+
+  bot.on('sticker', async (ctx, next) => {
+    // ctx.reply(`#Sticker\nID: \`${ctx.message.sticker ? ctx.message.sticker.file_id : ''}\``, Extra.markdown())
+  })
+  bot.command('luojun', Subscribe.stickerHandler)
+
+  bot.action(/(all|less|att)\|(\d+)/, (ctx) => {
+    debug('Received action: ', ctx.match[0], ctx.match[1], ctx.match[2])
+    BotShortcut.handlePost(ctx)
+  })
+
+  bot.action(/^(subscribeAddId|subscribeDelId)\|(\d+)/, Subscribe.callbackHandler)
+  bot.action(/^(sticker|subscribeAdd|subscribeDel|subscribe|)$/, Subscribe.callbackHandler)
+
+  bot.catch((err) => {
+    require('debug')('SYSUBOT_Telegraf')('Ooops', err)
+  })
+
+  Fetch.start(bot, DefaultConfig.parseType, {
+    interval: 6000
+  })
+  
+  /* let userList = await Database.User.findAll()
   for (let user of userList) {
-    bot.telegram.sendMessage(user.chatId, `请注意，该 Bot 仍在非常早期的开发阶段，可能随时会删库（不跑路）并出现**大量冗余信息疯狂骚扰**的情况。如您觉得不适，请考虑**禁用该 Bot 的通知**，或者 **Delete & Stop 该 Bot**。非常感谢您使用大山中学快递员 Bot。`, {
+    bot.telegram.sendMessage(user.chatId, `大山中学快递员 Bot 即将进行推送测试。\n测试推送内容为近期数据院本科教务通知与学生工作通知，频率约为 2 条 / 分钟，敬请留意。`, {
       parse_mode: 'Markdown',
       disable_web_page_preview: true
     })
-  }
-  */
+  } */
 
   await bot.launch()
 })()
